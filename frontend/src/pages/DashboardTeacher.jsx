@@ -1,46 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import TeachersSideBar from '../components/layout/TeachersSideBar'; // Import the TEACHER sidebar
 import { dashboardAPI } from '../api/dashboardAPI';
 
-// HeroIcons
-import {
-    HomeIcon, UserGroupIcon, CalendarDaysIcon, ChartBarIcon, DocumentTextIcon, CogIcon,
-    Bars3Icon, XMarkIcon, BellIcon, MagnifyingGlassIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon,
-    EnvelopeIcon, PhoneIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, CubeTransparentIcon
-} from '@heroicons/react/24/outline';
+// HeroIcons - Required for the sidebar links
+import { HomeIcon, UserGroupIcon, CheckBadgeIcon, ClockIcon, DocumentTextIcon, CogIcon } from '@heroicons/react/24/outline';
+// Recharts Imports
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// --- FIX: Add Recharts imports ---
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
-// --- END FIX ---
-
-// Component imports
+// Component Imports
 import ChartCard from '../components/common/ChartCard';
-// --- FIX: Ensure this path is correct based on your file location ---
-import UserProfileCard from '../components/common/UserProfileCard';
-// --- END FIX ---
-import ActivityFeedCard from '../components/common/ActivityFeedCard';
-import SimpleCalendarCard from '../components/common/SimpleCalendarCard';
+// UserProfileCard data is passed to TeachersSideBar
 
-// --- Sidebar Links ---
+// --- Sidebar Links based on your requirements ---
 const teacherLinks = [
     { name: 'Dashboard', path: '/dashboard/teacher', icon: <HomeIcon /> },
-    { name: 'Calendar', path: '#', icon: <CalendarDaysIcon /> },
-    { name: 'Inbox', path: '#', icon: <EnvelopeIcon /> },
-    { name: 'Widget', path: '#', icon: <CubeTransparentIcon /> },
-    { name: 'Tasks', path: '#', icon: <CheckCircleIcon /> },
-    { name: 'Profile', path: '#', icon: <UserGroupIcon /> },
-    { name: 'Write Post', path: '#', icon: <DocumentTextIcon /> },
-    { name: 'Pages', path: '#', icon: <Bars3Icon /> },
-    { name: 'Chart', path: '#', icon: <ChartBarIcon /> },
-    { name: 'Social App', path: '#', icon: <ChatBubbleLeftRightIcon /> },
+    { name: 'Attendance', path: '#', icon: <CheckBadgeIcon /> },
+    { name: 'Timetable', path: '#', icon: <ClockIcon /> },
+    { name: 'Student list', path: '#', icon: <UserGroupIcon /> },
+    { name: 'My Qualifications', path: '#', icon: <DocumentTextIcon /> },
 ];
 
 const bottomLinks = [
-    { name: 'Global Setting', path: '#', icon: <CogIcon /> },
+    { name: 'Setting', path: '#', icon: <CogIcon /> },
 ];
-// --- END Sidebar Links ---
+// --- END Links ---
 
 const DashboardTeacher = () => {
     const [data, setData] = useState(null);
@@ -59,105 +43,161 @@ const DashboardTeacher = () => {
         fetchData();
     }, []);
 
-    // --- MOCK DATA FOR NEW DESIGN ---
-    const kpiData = {
-        totalStudents: data?.kpis?.total_students || 4,
-        classAverageGpa: data?.kpis?.average_gpa || 3.25,
-        classAvgAttendance: data?.kpis?.average_attendance || 92.5,
-        thisWeekIncome: data?.kpis?.weekly_income || 1250,
-    };
-
-    const recentOrdersData = [
-        { client: 'Mr. John', orderNumber: '123979', date: '11-07-18', status: 'completed' },
-        { client: 'Mr. Daniel', orderNumber: '123979', date: '11-07-18', status: 'pending' },
-        { client: 'Mr. David', orderNumber: '123979', date: '11-07-18', status: 'in progress' },
-        { client: 'Mr. Tony', orderNumber: '123979', date: '11-07-18', status: 'declined' },
-        { client: 'Mr. Mark', orderNumber: '123979', date: '11-07-18', status: 'completed' },
+    // --- MOCK/API DATA FOR THE LIGHT THEME DESIGN ---
+    const attendanceChartData = [
+        { name: 'Music', Attendance: 25, Other: 18 },
+        { name: 'Dance', Attendance: 33, Other: 12 },
+        { name: 'Keyboard', Attendance: 42, Other: 22 },
+        { name: 'Violin', Attendance: 26, Other: 20 },
     ];
 
-    const recentCommentsData = [
-        { user: 'Mark Hamilton', comment: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor...' },
-        { user: 'Thomas Gold', comment: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor...' },
-        { user: 'Jessica Smith', comment: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor...' },
-    ];
+    const studentAttendanceData = data?.students?.slice(0, 4).map(s => ({
+        name: s.name,
+        percentage: s.attendance || Math.floor(Math.random() * 11) + 90,
+        count: `${Math.round(((s.attendance || 90) / 100) * 28)} of 28`
+    })) || [
+            { name: 'Rohan Kumar', percentage: 90.00, count: '25 of 28' },
+            { name: 'Zubair (Example 1)', percentage: 95.00, count: '27 of 28' },
+            { name: 'Sajida (Example 2)', percentage: 88.00, count: '25 of 28' },
+            { name: 'Student Four', percentage: 92.00, count: '26 of 28' },
+        ];
+    // --- END DATA ---
 
-    const contactListData = [
-        { name: 'Andrew Bennet', avatar: null, status: 'online' }, // Using null for avatar placeholder
-        { name: 'Jessica Smith', avatar: null, status: 'offline' },
-        { name: 'David Lee', avatar: null, status: 'online' },
-    ];
-
-    const salesChartData = [
-        { name: 'Week 1', sales: 65, uv: 50 },
-        { name: 'Week 2', sales: 59, uv: 40 },
-        { name: 'Week 3', sales: 80, uv: 85 },
-        { name: 'Week 4', sales: 81, uv: 70 },
-        { name: 'Week 5', sales: 56, uv: 60 },
-        { name: 'Week 6', sales: 55, uv: 75 },
-        { name: 'Week 7', sales: 40, uv: 30 },
-    ];
-    // --- END MOCK DATA ---
+    // Define profile objects within the component render logic after checking loading/error
+    const prepareSidebarProfile = (profileData, institutionName) => ({
+        name: profileData?.name || "User Name",
+        avatar: null, // Replace with profileData?.avatarUrl when available
+        details: profileData?.subject || "Subject/Dept Placeholder",
+        institution: institutionName || "Institution Placeholder"
+    });
 
     if (loading) {
+        const loadingProfile = prepareSidebarProfile(); // Get default loading profile
         return (
-            <DashboardLayout role="teacher" links={teacherLinks} bottomLinks={bottomLinks} userName="Loading...">
+            <DashboardLayout
+                role="teacher"
+                links={teacherLinks}
+                bottomLinks={bottomLinks}
+                userName="Loading..."
+                profile={loadingProfile} // Pass profile data for sidebar
+                SidebarComponent={TeachersSideBar} // Specify Teacher sidebar
+            >
                 <div className="p-6 text-center text-xl">Loading Teacher Dashboard...</div>
             </DashboardLayout>
         );
     }
 
     if (!data) {
+        const errorProfile = prepareSidebarProfile(); // Get default error profile
         return (
-            <DashboardLayout role="teacher" links={teacherLinks} bottomLinks={bottomLinks} userName="Error">
+            <DashboardLayout
+                role="teacher"
+                links={teacherLinks}
+                bottomLinks={bottomLinks}
+                userName="Error"
+                profile={errorProfile} // Pass profile data for sidebar
+                SidebarComponent={TeachersSideBar} // Specify Teacher sidebar
+            >
                 <div className="p-6 text-center text-xl text-red-500">Failed to load data. Please try logging in again.</div>
             </DashboardLayout>
         );
     }
 
+    // If data loaded successfully:
     const { profile } = data;
+    // Prepare profile data for sidebar from actual API data
+    const sidebarProfile = prepareSidebarProfile(profile, data?.institution?.name);
 
     return (
-        <DashboardLayout role="teacher" links={teacherLinks} bottomLinks={bottomLinks} userName={profile?.name}>
-            <div className="flex w-full"> {/* Outer flex container */}
-                {/* Left Profile/Summary Section */}
-                <div className="w-1/4 min-w-[280px] p-6 bg-white dark:bg-dark-card rounded-l-xl shadow-lg border-r dark:border-slate-700">
-                    <UserProfileCard profile={profile} income={kpiData.thisWeekIncome} />
-                </div>
+        <DashboardLayout
+            role="teacher"
+            links={teacherLinks}
+            bottomLinks={bottomLinks}
+            userName={profile?.name} // For Navbar
+            profile={sidebarProfile}  // For Sidebar
+            SidebarComponent={TeachersSideBar} // Specify Teacher sidebar
+        >
+            {/* Main Content Area - Light theme layout */}
+            <div className="p-6 space-y-6"> {/* Padding provided by DashboardLayout */}
 
-                {/* Main Content Area */}
-                <div className="flex-1 p-6 space-y-6">
-                    {/* Top Row: Chart and Calendar */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <ChartCard title="This Week Income">
-                            <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={salesChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                    <Tooltip />
-                                    <Line type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                            <div className="flex justify-around mt-4 text-sm text-gray-500 dark:text-gray-400">
-                                <span>Item #1 (50)</span>
-                                <span>Item #2 (30)</span>
-                                <span>Item #3 (72)</span>
-                            </div>
-                        </ChartCard>
-                        <SimpleCalendarCard />
+                {/* Top Row: Attendance Chart (Larger) */}
+                <div className="bg-light-card dark:bg-dark-card p-4 rounded-lg shadow-md animate-fade-in-up">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-text-main dark:text-text-main-dark">Attendance Overview</h3>
+                        <select className="text-sm border rounded p-1.5 bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 focus:outline-none focus:ring-1 focus:ring-primary-500 text-text-main dark:text-text-main-dark">
+                            <option>This Month</option>
+                            <option>Last Month</option>
+                            <option>This Year</option>
+                        </select>
                     </div>
-
-                    {/* Middle Row: Recent Orders and Comments */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <ActivityFeedCard title="Recent Orders" items={recentOrdersData} type="orders" />
-                        <ActivityFeedCard title="Recent Comments" items={recentCommentsData} type="comments" />
-                    </div>
-
-                    {/* Bottom Row: Contact List */}
-                    <div className="w-full">
-                        <ActivityFeedCard title="Contact List" items={contactListData} type="contacts" />
+                    <div style={{ height: '350px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={attendanceChartData} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
+                                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} width={40} />
+                                <Tooltip wrapperStyle={{ fontSize: '12px', backgroundColor: '#fff', border: '1px solid #ccc' }} />
+                                <Bar dataKey="Attendance" fill="#2563eb" barSize={20} radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
+
+                {/* Bottom Row: Today's Attendance Table (Students) */}
+                <div className="bg-light-card dark:bg-dark-card p-4 rounded-lg shadow-md animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    <h3 className="text-lg font-semibold text-text-main dark:text-text-main-dark mb-4">Today's Attendance</h3>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                            <thead className="bg-gray-50 dark:bg-slate-700/50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">
+                                        Student Name
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">
+                                        Percentage
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">
+                                        Present/Total
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-light-card dark:bg-dark-card divide-y divide-gray-200 dark:divide-slate-700">
+                                {studentAttendanceData.map((student, index) => (
+                                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-text-main dark:text-text-main-dark">
+                                            {student.name}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-text-secondary dark:text-text-secondary-dark">
+                                            {student.percentage.toFixed(1)}%
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-text-secondary dark:text-text-secondary-dark">
+                                            {student.count}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Placeholder Sections for Timetable and Qualifications */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <div className="bg-light-card dark:bg-dark-card p-4 rounded-lg shadow-md">
+                        <h3 className="text-lg font-semibold text-text-main dark:text-text-main-dark mb-4">My Timetable</h3>
+                        <div className="text-center text-text-secondary dark:text-text-secondary-dark p-10 border-dashed border-2 border-gray-300 dark:border-slate-600 rounded-lg">
+                            Timetable display/edit placeholder.
+                            <button className="mt-4 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700">Add/Edit Timetable</button>
+                        </div>
+                    </div>
+                    <div className="bg-light-card dark:bg-dark-card p-4 rounded-lg shadow-md">
+                        <h3 className="text-lg font-semibold text-text-main dark:text-text-main-dark mb-4">My Qualifications</h3>
+                        <div className="text-center text-text-secondary dark:text-text-secondary-dark p-10 border-dashed border-2 border-gray-300 dark:border-slate-600 rounded-lg">
+                            Qualifications list placeholder.
+                            <button className="mt-4 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700">Upload PDF Certificate</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </DashboardLayout>
     );

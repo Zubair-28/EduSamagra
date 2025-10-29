@@ -1,151 +1,116 @@
-// Institution Dashboard
 import React, { useEffect, useState } from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
+// Removed layout imports
 import { dashboardAPI } from '../api/dashboardAPI';
 import KPIBox from '../components/common/KPIBox';
 import ChartCard from '../components/common/ChartCard';
 import DataTable from '../components/common/DataTable';
-import { HomeIcon, UserGroupIcon, AcademicCapIcon, BuildingOfficeIcon, ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
-import { SparklesIcon } from '@heroicons/react/24/solid';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import axiosInstance from '../api/axiosInstance'; // For upload
-
-const institutionLinks = [
-    { name: 'Dashboard', path: '/dashboard/institution', icon: <HomeIcon /> },
-    { name: 'Faculty', path: '#', icon: <AcademicCapIcon /> },
-    { name: 'Students', path: '#', icon: <UserGroupIcon /> },
-    { name: 'Upload Data', path: '#', icon: <ArrowUpOnSquareIcon /> },
-];
+import { UserGroupIcon, AcademicCapIcon, BuildingOfficeIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+// Removed link/icon imports for sidebar (handled by MainLayout)
 
 const DashboardInstitution = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [file, setFile] = useState(null);
-    const [uploadStatus, setUploadStatus] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
+            setError('');
             try {
+                // --- THIS IS THE FIX ---
+                // Call the 'institution' endpoint, not 'admin'
                 const response = await dashboardAPI.getDashboardData('institution');
+                // --- END FIX ---
                 setData(response.data);
-            } catch (error) {
-                console.error("Failed to fetch institution data", error);
+            } catch (err) {
+                console.error("Failed to fetch institution data", err);
+                setError('Failed to load dashboard data.');
             }
             setLoading(false);
         };
         fetchData();
     }, []);
 
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
-    };
-
-    const handleUpload = async () => {
-        if (!file) {
-            setUploadStatus('Please select a file.');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('file', file);
-        setUploadStatus('Uploading...');
-
-        try {
-            const response = await axiosInstance.post('/institution/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            setUploadStatus(response.data.msg);
-        } catch (error) {
-            setUploadStatus(error.response?.data?.msg || 'Upload failed.');
-        }
-    };
-
     if (loading) {
-        return (
-            <DashboardLayout role="institution" links={institutionLinks}>
-                <div className="text-center text-xl">Loading Institution Dashboard...</div>
-            </DashboardLayout>
-        );
+        return <div className="p-6 text-center text-xl text-text-secondary">Loading Institution Dashboard...</div>;
     }
 
-    if (!data) {
-        return (
-            <DashboardLayout role="institution" links={institutionLinks}>
-                <div className="text-center text-xl text-red-500">Failed to load data.</div>
-            </DashboardLayout>
-        );
+    if (error || !data) {
+        return <div className="p-6 text-center text-xl text-red-500">{error || 'Failed to load data.'}</div>;
     }
 
-    const { profile, kpis, faculty, ai_insight, charts } = data;
+    // Safely destructure data with fallbacks
+    const { profile, kpis, faculty = [], charts } = data || {};
 
     return (
-        <DashboardLayout role="institution" links={institutionLinks}>
-            <h2 className="text-3xl font-semibold mb-6 dark:text-white">
-                {profile.name} Dashboard 🏫
+        // Render ONLY the page content
+        <div className="p-6 space-y-6">
+            <h2 className="text-2xl font-semibold text-text-main mb-4">
+                {profile?.name || 'Institution'} Dashboard
             </h2>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <KPIBox title="Total Students" value={kpis.total_students} icon={<UserGroupIcon />} theme="institution" />
-                <KPIBox title="Total Faculty" value={kpis.total_teachers} icon={<AcademicCapIcon />} theme="institution" />
-                <KPIBox title="Institute Avg. GPA" value={kpis.avg_gpa} icon={<SparklesIcon />} theme="institution" />
-                <KPIBox title="NIRF Rank (Mock)" value={`#${kpis.nirf_rank}`} icon={<BuildingOfficeIcon />} theme="institution" />
+            {/* KPI Boxes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 animate-fade-in-up">
+                <KPIBox title="Total Students" value={kpis?.total_students || 0} icon={<UserGroupIcon />} delay={0} />
+                <KPIBox title="Total Faculty" value={kpis?.total_teachers || 0} icon={<AcademicCapIcon />} delay={100} />
+                <KPIBox title="Average GPA" value={kpis?.avg_gpa?.toFixed(2) ?? 'N/A'} icon={<SparklesIcon />} delay={200} />
+                <KPIBox title="NIRF Rank (Mock)" value={`#${kpis?.nirf_rank || 'N/A'}`} icon={<BuildingOfficeIcon />} delay={300} />
             </div>
 
+            {/* Charts & Faculty List */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column (Charts & Upload) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <ChartCard title="Department Performance (Avg. GPA)">
-                        <BarChart data={charts.department_performance}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="avg_gpa" fill="#f97316" />
-                        </BarChart>
+                <div className="lg:col-span-2">
+                    <ChartCard title="Department Performance (Mock)">
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={charts?.department_performance || []} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                                <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+                                <Tooltip />
+                                <Bar dataKey="avg_gpa" fill="#06b6d4" />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </ChartCard>
-
-                    <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md animate-fade-in" style={{ animationDelay: '100ms' }}>
-                        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Upload AISHE/NIRF Data (CSV)</h3>
-                        <div className="flex items-center space-x-4">
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={handleFileChange}
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-institution dark:file:bg-slate-700 dark:file:text-orange-300 hover:file:bg-orange-100"
-                            />
-                            <button
-                                onClick={handleUpload}
-                                className="px-4 py-2 bg-institution text-white rounded-lg hover:bg-orange-700"
-                            >
-                                Upload
-                            </button>
-                        </div>
-                        {uploadStatus && <p className="text-sm mt-4">{uploadStatus}</p>}
-                    </div>
                 </div>
-
-                {/* Right Column (AI & Faculty) */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="p-4 rounded-lg shadow bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-500 animate-fade-in" style={{ animationDelay: '200ms' }}>
-                        <div className="flex items-center">
-                            <SparklesIcon className="h-6 w-6 mr-3 text-blue-500" />
-                            <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200">AI Ranking Forecast</h4>
-                        </div>
-                        <p className="mt-2 text-blue-700 dark:text-blue-300">
-                            {ai_insight.prediction_text}
-                        </p>
+                {/* Faculty List Card */}
+                <div className="bg-light-card p-4 rounded-lg shadow-md animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    <h3 className="text-lg font-semibold text-text-main mb-4">Faculty Overview</h3>
+                    <div className="overflow-y-auto max-h-80 pr-2">
+                        {faculty.length > 0 ? (
+                            <ul className="divide-y divide-gray-200">
+                                {faculty.map(f => (
+                                    <li key={f.id} className="py-2">
+                                        <p className="text-sm font-medium text-text-main">{f.name}</p>
+                                        <p className="text-xs text-text-secondary">{f.subject}</p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-text-secondary">No faculty data available.</p>
+                        )}
                     </div>
-                    <DataTable
-                        title="Faculty Overview"
-                        columns={['Name', 'Subject', 'Feedback']}
-                        data={faculty.map(f => ({ name: f.name, subject: f.subject, feedback: f.avg_feedback.toFixed(1) }))}
-                    />
                 </div>
             </div>
-        </DashboardLayout>
+
+            {/* You can add the Upload/Events placeholders back here if needed */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                <div className="bg-light-card p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold text-text-main mb-4">Upload AISHE/NIRF Data</h3>
+                    <div className="text-center text-text-secondary p-10 border-dashed border-2 border-gray-300 rounded-lg">
+                        Upload component placeholder.
+                        <button className="mt-4 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700">Upload CSV</button>
+                    </div>
+                </div>
+                <div className="bg-light-card p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold text-text-main mb-4">Manage Events</h3>
+                    <div className="text-center text-text-secondary p-10 border-dashed border-2 border-gray-300 rounded-lg">
+                        Events list placeholder.
+                        <button className="mt-4 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700">Create New Event</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };
 

@@ -1,40 +1,50 @@
-// Reusable data table component
 import React from 'react';
 
-const DataTable = ({ title, columns, data }) => {
+// Added 'renderCell' prop
+const DataTable = ({ title, columns, data, renderCell }) => {
     if (!data || data.length === 0) {
         return (
-            <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md animate-fade-in" style={{ animationDelay: '300ms' }}>
-                <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">{title}</h3>
-                <p className="text-gray-500 dark:text-gray-400">No data available.</p>
+            <div className="p-6 bg-light-card rounded-lg shadow-md animate-fade-in-up"> {/* Use light-card, adjusted animation */}
+                <h3 className="text-lg font-semibold text-text-main mb-4">{title}</h3> {/* Use text-main */}
+                <p className="text-text-secondary">No data available.</p> {/* Use text-secondary */}
             </div>
         )
     }
 
-    const keys = Object.keys(data[0]);
+    // Attempt to derive keys from the first data row if columns match structure, otherwise use basic derivation
+    const dataKeys = Object.keys(data[0]);
+    const keys = columns.length === dataKeys.length ? dataKeys : columns.map(col => col.toLowerCase().replace(/[^a-z0-9]/gi, '_')); // More robust key derivation
+
 
     return (
-        <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">{title}</h3>
+        <div className="p-4 bg-light-card rounded-lg shadow-md animate-fade-in-up"> {/* Use light-card, padding adjusted */}
+            <h3 className="text-lg font-semibold text-text-main mb-4">{title}</h3> {/* Use text-main */}
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-                    <thead className="bg-gray-50 dark:bg-slate-900">
+                <table className="min-w-full divide-y divide-gray-200"> {/* Light theme divide */}
+                    <thead className="bg-gray-50"> {/* Light theme header */}
                         <tr>
                             {columns.map((col, index) => (
-                                <th key={index} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th key={index} scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider"> {/* Light theme text */}
                                     {col}
                                 </th>
                             ))}
+                            {/* Optional: Add Actions column header if needed later */}
+                            {/* <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th> */}
                         </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                    <tbody className="bg-light-card divide-y divide-gray-200"> {/* Light theme bg/divide */}
                         {data.map((row, rowIndex) => (
-                            <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <tr key={rowIndex} className="hover:bg-gray-50"> {/* Light theme hover */}
                                 {keys.map((key, cellIndex) => (
-                                    <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                        {row[key]}
+                                    <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-text-main"> {/* Light theme text */}
+                                        {/* Use renderCell function if provided */}
+                                        {renderCell && typeof renderCell === 'function'
+                                            ? renderCell(row, key, row[key]) // Pass row, key, and value
+                                            : row[key] // Default render
+                                        }
                                     </td>
                                 ))}
+                                {/* Optional: Add Actions cell per row if needed later */}
                             </tr>
                         ))}
                     </tbody>

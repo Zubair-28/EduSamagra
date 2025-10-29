@@ -41,6 +41,11 @@ class Student(db.Model):
     overall_gpa = db.Column(db.Numeric(3, 2), default=0.00)
     attendance_percentage = db.Column(db.Numeric(5, 2), default=100.00)
     records = db.relationship('Record', backref='student', lazy=True, cascade="all, delete-orphan")
+    
+    # --- Relationships for Portfolio ---
+    portfolio_projects = db.relationship('PortfolioProject', back_populates='student', lazy=True, cascade="all, delete-orphan")
+    skills = db.relationship('StudentSkill', back_populates='student', lazy=True, cascade="all, delete-orphan")
+    links = db.relationship('StudentLink', back_populates='student', lazy=True, cascade="all, delete-orphan")
 
 class Teacher(db.Model):
     __tablename__ = 'teachers'
@@ -102,3 +107,34 @@ class Timetable(db.Model):
     day_of_week = db.Column(db.Enum('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), nullable=False)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
+
+class PortfolioProject(db.Model):
+    __tablename__ = 'portfolio_projects'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    project_link = db.Column(db.String(500), nullable=True)
+    tags = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
+    student = db.relationship('Student', back_populates='portfolio_projects')
+
+# --- NEW TABLES FOR SKILLS AND LINKS ---
+
+class StudentSkill(db.Model):
+    __tablename__ = 'student_skills'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    skill_name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(100), nullable=True) # e.g., "Technical", "Soft Skill"
+    
+    student = db.relationship('Student', back_populates='skills')
+
+class StudentLink(db.Model):
+    __tablename__ = 'student_links'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False) # e.g., "GitHub", "LinkedIn"
+    url = db.Column(db.String(500), nullable=False)
+    
+    student = db.relationship('Student', back_populates='links')
