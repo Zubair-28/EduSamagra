@@ -3,16 +3,15 @@ import DashboardLayout from './DashboardLayout';
 import Sidebar from './Sidebar';
 import StudentSideBar from './StudentSideBar';
 import TeachersSideBar from './TeachersSideBar';
-import { dashboardAPI } from '../../api/dashboardAPI'; // Import the API
-
+import axiosInstance from '../../api/axiosInstance';
 // Import Icons needed for links
 import {
     HomeIcon, ChartBarIcon, UserIcon, BookOpenIcon, ClockIcon, SparklesIcon, CogIcon, // Student
     CheckBadgeIcon, DocumentTextIcon, // Teacher
-    BuildingOfficeIcon, // Admin
-    AcademicCapIcon, // Institution
-    UserGroupIcon, // Common
+    BuildingOfficeIcon, AcademicCapIcon, UserGroupIcon, // Admin/Institution
+    UsersIcon, BanknotesIcon // Added Banknotes and Users for Admin KPI
 } from '@heroicons/react/24/outline';
+
 
 // --- Sidebar Links Definition ---
 const studentLinks = [
@@ -27,7 +26,7 @@ const studentBottomLinks = [{ name: 'Setting', path: '/dashboard/student/setting
 
 const teacherLinks = [
     { name: 'Dashboard', path: '/dashboard/teacher', icon: <HomeIcon /> },
-    { name: 'Attendance', path: '#', icon: <CheckBadgeIcon /> },
+    { name: 'Attendance', path: '/dashboard/teacher/attendance', icon: <CheckBadgeIcon /> },
     { name: 'Timetable', path: '#', icon: <ClockIcon /> },
     { name: 'Student list', path: '#', icon: <UserGroupIcon /> },
     { name: 'My Qualifications', path: '#', icon: <DocumentTextIcon /> },
@@ -47,6 +46,7 @@ const institutionLinks = [
 ];
 const institutionBottomLinks = [{ name: 'Settings', path: '#', icon: <CogIcon /> }];
 
+
 // --- Default Profiles ---
 const defaultProfiles = {
     student: { name: "Student", avatar: null, details: "Course", institution: "Institution" },
@@ -56,7 +56,6 @@ const defaultProfiles = {
     default: { name: "User", avatar: null, details: "...", institution: "..." }
 };
 
-// --- Profile Helper ---
 const prepareSidebarProfile = (profileData, defaultProfile) => ({
     name: profileData?.name || defaultProfile.name,
     avatar: profileData?.avatar || defaultProfile.avatar,
@@ -66,7 +65,7 @@ const prepareSidebarProfile = (profileData, defaultProfile) => ({
 
 
 const MainLayout = ({ children, expectedRole }) => {
-    const [dashboardData, setDashboardData] = useState(null); // Holds all data (profile, kpis, charts)
+    const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [layoutConfig, setLayoutConfig] = useState({
@@ -78,6 +77,7 @@ const MainLayout = ({ children, expectedRole }) => {
     useEffect(() => {
         // 1. Set sidebar/links config based on role
         let links, bottomLinks, SidebarComponent;
+
         switch (expectedRole) {
             case 'student':
                 links = studentLinks; bottomLinks = studentBottomLinks; SidebarComponent = StudentSideBar;
@@ -96,25 +96,42 @@ const MainLayout = ({ children, expectedRole }) => {
         }
         setLayoutConfig({ links, bottomLinks, SidebarComponent });
 
+
         // 2. Fetch data for this dashboard
         const fetchData = async () => {
             setLoading(true);
             setError('');
             try {
-                // Fetch all data for the current role's dashboard
-                const response = await dashboardAPI.getDashboardData(expectedRole);
+                let apiPath = '';
+
+                // --- FIX: Determine the correct API path based on role ---
+                if (expectedRole === 'admin') {
+                    apiPath = '/admin/overview'; // CORRECT Admin Overview Path
+                } else if (expectedRole === 'institution') {
+                    apiPath = '/institution/overview'; // CORRECT Institution Overview Path
+                } else {
+                    apiPath = `/${expectedRole}/dashboard`; // Student/Teacher
+                }
+
+                // Fetch data
+                const response = await axiosInstance.get(apiPath);
                 setDashboardData(response.data);
+
             } catch (err) {
-                console.error(`Failed to fetch ${expectedRole} data`, err);
-                setError(`Failed to load ${expectedRole} dashboard data.`);
+                console.error(`Failed to fetch ${expectedRole} data from API: ${err.message}`, err);
+                // The error message is now more generic for the frontend display
+                setError(`Failed to load ${expectedRole} dashboard data. Please check if your backend is running.`);
             }
             setLoading(false);
         };
 
         if (expectedRole) {
             fetchData();
+        } else {
+            setLoading(false);
+            setError("No role provided to layout.");
         }
-    }, [expectedRole]); // Re-run if the role changes
+    }, [expectedRole]);
 
     // Get the correct default profile for the current role
     const defaultProfile = defaultProfiles[expectedRole] || defaultProfiles.default;
@@ -158,7 +175,7 @@ const MainLayout = ({ children, expectedRole }) => {
             SidebarComponent={layoutConfig.SidebarComponent}
         >
             {/* Pass the fetched data down to the actual page component */}
-            {React.cloneElement(children, { dashboardData: dashboardData || {} })}
+            {React.isValidElement(children) ? cloneElement(children, { dashboardData: dashboardData || {} }) : children}
         </DashboardLayout>
     );
 };

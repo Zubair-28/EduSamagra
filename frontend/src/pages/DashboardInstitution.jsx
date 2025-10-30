@@ -1,12 +1,10 @@
+// frontend/src/pages/DashboardInstitution.jsx
 import React, { useEffect, useState } from 'react';
-// Removed layout imports
-import { dashboardAPI } from '../api/dashboardAPI';
+import axiosInstance from '../api/axiosInstance';
 import KPIBox from '../components/common/KPIBox';
 import ChartCard from '../components/common/ChartCard';
-import DataTable from '../components/common/DataTable';
 import { UserGroupIcon, AcademicCapIcon, BuildingOfficeIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-// Removed link/icon imports for sidebar (handled by MainLayout)
 
 const DashboardInstitution = () => {
     const [data, setData] = useState(null);
@@ -18,17 +16,19 @@ const DashboardInstitution = () => {
             setLoading(true);
             setError('');
             try {
-                // --- THIS IS THE FIX ---
-                // Call the 'institution' endpoint, not 'admin'
-                const response = await dashboardAPI.getDashboardData('institution');
-                // --- END FIX ---
+                // Call the backend endpoint that exists: /institution/overview
+                // axiosInstance should have baseURL like '/api' configured
+                const response = await axiosInstance.get('/institution/overview');
                 setData(response.data);
             } catch (err) {
-                console.error("Failed to fetch institution data", err);
+                console.error('Failed to fetch institution data', err);
+                // Provide a helpful error message but keep it generic for UI
                 setError('Failed to load dashboard data.');
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
+
         fetchData();
     }, []);
 
@@ -40,11 +40,12 @@ const DashboardInstitution = () => {
         return <div className="p-6 text-center text-xl text-red-500">{error || 'Failed to load data.'}</div>;
     }
 
-    // Safely destructure data with fallbacks
-    const { profile, kpis, faculty = [], charts } = data || {};
+    // Safe destructuring with defaults
+    const { profile = {}, kpis = {}, faculty = [], charts = {} } = data;
+    const avgGpa = (kpis?.avg_gpa != null && typeof kpis.avg_gpa === 'number') ? kpis.avg_gpa.toFixed(2) : 'N/A';
+    const departmentPerformance = Array.isArray(charts?.department_performance) ? charts.department_performance : [];
 
     return (
-        // Render ONLY the page content
         <div className="p-6 space-y-6">
             <h2 className="text-2xl font-semibold text-text-main mb-4">
                 {profile?.name || 'Institution'} Dashboard
@@ -52,10 +53,10 @@ const DashboardInstitution = () => {
 
             {/* KPI Boxes */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 animate-fade-in-up">
-                <KPIBox title="Total Students" value={kpis?.total_students || 0} icon={<UserGroupIcon />} delay={0} />
-                <KPIBox title="Total Faculty" value={kpis?.total_teachers || 0} icon={<AcademicCapIcon />} delay={100} />
-                <KPIBox title="Average GPA" value={kpis?.avg_gpa?.toFixed(2) ?? 'N/A'} icon={<SparklesIcon />} delay={200} />
-                <KPIBox title="NIRF Rank (Mock)" value={`#${kpis?.nirf_rank || 'N/A'}`} icon={<BuildingOfficeIcon />} delay={300} />
+                <KPIBox title="Total Students" value={kpis?.total_students ?? 0} icon={<UserGroupIcon />} delay={0} />
+                <KPIBox title="Total Faculty" value={kpis?.total_teachers ?? 0} icon={<AcademicCapIcon />} delay={100} />
+                <KPIBox title="Average GPA" value={avgGpa} icon={<SparklesIcon />} delay={200} />
+                <KPIBox title="NIRF Rank (Mock)" value={kpis?.nirf_rank ? `#${kpis.nirf_rank}` : 'N/A'} icon={<BuildingOfficeIcon />} delay={300} />
             </div>
 
             {/* Charts & Faculty List */}
@@ -63,7 +64,7 @@ const DashboardInstitution = () => {
                 <div className="lg:col-span-2">
                     <ChartCard title="Department Performance (Mock)">
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={charts?.department_performance || []} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <BarChart data={departmentPerformance} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                 <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
@@ -73,16 +74,17 @@ const DashboardInstitution = () => {
                         </ResponsiveContainer>
                     </ChartCard>
                 </div>
+
                 {/* Faculty List Card */}
                 <div className="bg-light-card p-4 rounded-lg shadow-md animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                     <h3 className="text-lg font-semibold text-text-main mb-4">Faculty Overview</h3>
                     <div className="overflow-y-auto max-h-80 pr-2">
                         {faculty.length > 0 ? (
                             <ul className="divide-y divide-gray-200">
-                                {faculty.map(f => (
-                                    <li key={f.id} className="py-2">
-                                        <p className="text-sm font-medium text-text-main">{f.name}</p>
-                                        <p className="text-xs text-text-secondary">{f.subject}</p>
+                                {faculty.map((f, idx) => (
+                                    <li key={f.id ?? idx} className="py-2">
+                                        <p className="text-sm font-medium text-text-main">{f.name ?? 'Unknown'}</p>
+                                        <p className="text-xs text-text-secondary">{f.subject ?? '—'}</p>
                                     </li>
                                 ))}
                             </ul>
@@ -93,7 +95,7 @@ const DashboardInstitution = () => {
                 </div>
             </div>
 
-            {/* You can add the Upload/Events placeholders back here if needed */}
+            {/* Upload & Events placeholders */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <div className="bg-light-card p-4 rounded-lg shadow-md">
                     <h3 className="text-lg font-semibold text-text-main mb-4">Upload AISHE/NIRF Data</h3>

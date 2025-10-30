@@ -1,30 +1,34 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.jwt_helper import role_required
 from models import db, User, Student, Teacher, Institution
-from utils.ai_model import predict_institution_rank
 from sqlalchemy.sql import func
 import pandas as pd
 import io
 
 institution_bp = Blueprint('institution_bp', __name__)
 
-@institution_bp.route('/dashboard', methods=['GET'])
+@institution_bp.route('/overview', methods=['GET'])
 @role_required('institution')
-def get_institution_dashboard():
+def get_institution_overview():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
+    
+    # --- Check for associated institution ---
+    if not user or not user.institution_id:
+        return jsonify(msg="User or institution ID not found"), 404
+        
     institution = Institution.query.get(user.institution_id)
 
     if not institution:
-        return jsonify(msg="Institution not found"), 404
+        return jsonify(msg="Institution data not found"), 404
 
-    # KPIs
+    # KPIs (using mock values and simple aggregation)
     total_students = db.session.query(func.count(Student.id)).join(User).filter(User.institution_id == institution.id).scalar()
     total_teachers = db.session.query(func.count(Teacher.id)).join(User).filter(User.institution_id == institution.id).scalar()
     avg_gpa = db.session.query(func.avg(Student.overall_gpa)).join(User).filter(User.institution_id == institution.id).scalar()
     
-    # Faculty List
+    # Mock Faculty List for the dashboard card
     teachers = Teacher.query.join(User).filter(User.institution_id == institution.id).all()
     faculty_list = [{
         "id": t.id,
@@ -32,9 +36,6 @@ def get_institution_dashboard():
         "subject": t.subject,
         "avg_feedback": float(t.avg_feedback)
     } for t in teachers]
-    
-    # AI Insight
-    ai_insight = predict_institution_rank(total_students, float(avg_gpa or 0))
     
     # Mock Chart Data
     department_performance = [
@@ -46,7 +47,9 @@ def get_institution_dashboard():
 
     dashboard_data = {
         "profile": {
-            "name": institution.name
+            "name": institution.name,
+            "type": institution.type,
+            "state": institution.state
         },
         "kpis": {
             "total_students": total_students,
@@ -55,13 +58,13 @@ def get_institution_dashboard():
             "nirf_rank": 42 # Mocked
         },
         "faculty": faculty_list,
-        "ai_insight": ai_insight,
         "charts": {
             "department_performance": department_performance
         }
     }
     return jsonify(dashboard_data), 200
 
+# --- MOCK CSV UPLOAD ROUTE (needed for Institution Dashboard UI) ---
 
 @institution_bp.route('/upload', methods=['POST'])
 @role_required('institution')
@@ -73,14 +76,7 @@ def upload_data():
         return jsonify(msg="No selected file"), 400
 
     if file and file.filename.endswith('.csv'):
-        try:
-            # Mock processing: just read the CSV to confirm it's valid
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-            df = pd.read_csv(stream)
-            # In a real app, you'd parse df and update the database
-            
-            return jsonify(msg=f"Successfully uploaded and processed {len(df)} rows."), 200
-        except Exception as e:
-            return jsonify(msg=f"File processing error: {str(e)}"), 500
+        # Mock processing: just return success
+        return jsonify(msg=f"Successfully uploaded and processed mock data."), 200
             
     return jsonify(msg="Invalid file type. Please upload a CSV."), 400
